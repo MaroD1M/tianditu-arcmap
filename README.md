@@ -68,8 +68,14 @@
 
 ### 方式一：下载现成的 exe（最简单）
 
-前往 [**Releases**](https://github.com/MaroD1M/tianditu-arcmap/releases) 下载最新的
-`Tianditu-ArcMap-Loader.exe`，双击即可运行（无需安装 Python；程序窗口标题为「天地图 ArcMap 加载工具」）。
+前往 [**Releases**](https://github.com/MaroD1M/tianditu-arcmap/releases) 下载（二选一）：
+
+- `Tianditu-ArcMap-Loader.exe` —— 单文件，双击即用（无需安装 Python）；
+- `Tianditu-ArcMap-Loader-portable.zip` —— 便携包（exe + 使用提示），
+  用 7-Zip 解压后运行可避开部分 SmartScreen 拦截。
+
+程序窗口标题为「天地图 ArcMap 加载工具」。若被 SmartScreen 拦截，见
+[下方说明](#windowssmartscreen-提示怎么办)。
 
 ### 方式二：直接运行源码
 
@@ -228,7 +234,7 @@ build.bat
 
 ```bat
 pip install pyinstaller
-pyinstaller --noconfirm --clean --onefile --windowed --name "天地图加载工具" tianditu_gui.py
+pyinstaller --noconfirm --clean --onefile --windowed --noupx --name "天地图加载工具" tianditu_gui.py
 ```
 
 | 参数 | 作用 |
@@ -452,7 +458,8 @@ tianditu-arcmap/
 │   └── images/
 │       └── 界面预览.png   # 界面截图
 └── tools/
-    └── preview.py       # 开发用：无显示器下生成高清界面预览图
+    ├── preview.py       # 开发用：无显示器下生成高清界面预览图
+    └── make_version_info.py  # 打包用：由 APP_VERSION 生成 exe 版本资源
 ```
 
 ### 模块依赖关系

@@ -26,13 +26,19 @@ if errorlevel 1 (
 echo.
 echo [2/3] 开始打包（单文件、无控制台窗口）...
 
+REM 生成版本资源（产品名/版本/版权，来源：constants.APP_VERSION）
+python tools\make_version_info.py >nul 2>nul
+set VER_OPT=
+if exist "version_info.txt" set VER_OPT=--version-file version_info.txt
+
 REM 如果目录下存在图标文件，自动作为程序/托盘图标
 set ICON_OPT=
 if exist "app.ico"  set ICON_OPT=--icon app.ico
 if not defined ICON_OPT if exist "icon.ico" set ICON_OPT=--icon icon.ico
 if defined ICON_OPT echo       使用图标：%ICON_OPT%
 
-pyinstaller --noconfirm --clean --onefile --windowed %ICON_OPT% ^
+REM --noupx：不使用 UPX 压缩，降低部分杀软的启发式误报
+pyinstaller --noconfirm --clean --onefile --windowed --noupx %ICON_OPT% %VER_OPT% ^
     --name "天地图加载工具" ^
     tianditu_gui.py
 
