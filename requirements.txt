@@ -1,0 +1,29 @@
+# 天地图 ArcMap 加载工具 —— 运行期依赖说明
+# ============================================================
+# 本程序【运行期不需要任何第三方依赖】，仅使用 Python 标准库。
+# 因此本文件没有可安装的 pip 包，仅作说明；直接运行即可：
+#
+#     python tianditu_gui.py
+#
+# 环境要求
+# ------------------------------------------------------------
+#   Python 3.8+（在 3.8 / 3.10 / 3.13 上验证）
+#   Windows 10 / 11（托盘、开机自启、高 DPI 依赖 Windows API；
+#                   其它平台核心代理逻辑仍可运行，托盘自动降级）
+#   ArcMap 10.2+（消费端，需单独安装；已在 10.2.2 / 10.8.2 实测）
+#
+# 用到的标准库（按模块）
+# ------------------------------------------------------------
+#   GUI        tkinter, tkinter.ttk, tkinter.messagebox, tkinter.filedialog
+#   HTTP 服务  http.server, http.client, socketserver, socket
+#   并发       threading, queue, concurrent.futures
+#   数据/网络  json, urllib.parse, urllib.request, urllib.error
+#   系统       os, sys, time, random, re, subprocess, ctypes, ctypes.wintypes
+#   其它       webbrowser（打开测试页 / 官网）
+#
+# 说明
+# ------------------------------------------------------------
+#   * tkinter 随 Windows/macOS 官方 Python 安装包自带；Linux 上如缺失，
+#     可安装系统包 python3-tk（Debian/Ubuntu：sudo apt install python3-tk）。
+#   * winreg 仅 Windows 存在，用于「开机自动启动」，缺失时该功能自动关闭。
+#   * 打包成 exe 需要 PyInstaller，见 requirements-dev.txt。

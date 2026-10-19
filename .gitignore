@@ -1,0 +1,40 @@
+# ---- 运行时生成（含密钥，切勿提交）----
+config.json
+*.config.json
+cache/
+caches/
+*.tile
+*.tile.ctype
+*.jpg.ctype
+*.png.ctype
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+
+# ---- PyInstaller 打包产物 ----
+build/
+dist/
+*.spec
+
+# ---- 编辑器 / 系统 ----
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+@eaDir/
+.pnpm-store/
+
+# ---- 日志 ----
+*.log
+tianditu_log_*.txt
+
+# ---- 开发预览图（tools/preview.py 生成）----
+preview/

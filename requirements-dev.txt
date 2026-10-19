@@ -1,0 +1,19 @@
+# 天地图 ArcMap 加载工具 —— 开发 / 打包依赖
+# ============================================================
+# 仅开发、静态检查、打包 exe 时需要；普通运行无需安装任何依赖。
+#
+#     pip install -r requirements-dev.txt
+#
+# 打包（build.bat 会自动安装 PyInstaller）：
+#     pyinstaller --noconfirm --clean --onefile --windowed \
+#         --name "天地图加载工具" tianditu_gui.py
+
+# 打包成单个 exe（运行期仍无第三方依赖）
+pyinstaller>=5.13
+
+# 静态检查（可选，开发时用）
+pyflakes>=3.1
+
+# 生成界面预览图 tools/preview.py 时需要（仅开发用，运行程序本身不需要）
+# 另需系统提供 python3-tk、中文字体、Xvfb、ImageMagick(import)
+pillow>=9.0
