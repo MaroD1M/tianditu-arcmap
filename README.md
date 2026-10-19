@@ -67,7 +67,7 @@
 ### 方式一：下载现成的 exe（最简单）
 
 前往 [**Releases**](https://github.com/MaroD1M/tianditu-arcmap/releases) 下载最新的
-`天地图加载工具.exe`，双击即可运行（无需安装 Python）。
+`Tianditu-ArcMap-Loader.exe`，双击即可运行（无需安装 Python；程序窗口标题为「天地图 ArcMap 加载工具」）。
 
 ### 方式二：直接运行源码
 

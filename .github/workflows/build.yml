@@ -32,19 +32,19 @@ jobs:
         run: >
           pyinstaller --noconfirm --clean --onefile --windowed
           --icon icon.ico
-          --name "天地图加载工具"
+          --name "Tianditu-ArcMap-Loader"
           tianditu_gui.py
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
           name: tianditu-arcmap-windows
-          path: dist/*.exe
+          path: dist/Tianditu-ArcMap-Loader.exe
           if-no-files-found: error
 
       - name: Publish release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v3
         with:
-          files: dist/*.exe
+          files: dist/Tianditu-ArcMap-Loader.exe
           generate_release_notes: true
