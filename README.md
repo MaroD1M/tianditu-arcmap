@@ -28,6 +28,8 @@
 - [配置说明](#配置说明)
 - [缓存机制](#缓存机制)
 - [打包成 exe](#打包成-exe)
+- [Windows/SmartScreen 提示怎么办](#windowssmartscreen-提示怎么办)
+- [代码签名](#代码签名)
 - [常见问题](#常见问题)
 - [隐私与安全](#隐私与安全)
 - [技术说明](#技术说明)
@@ -239,6 +241,64 @@ pyinstaller --noconfirm --clean --onefile --windowed --name "天地图加载工�
 > 写成 `--name"xxx"` 会被 Python 的 argparse 判为无法识别的参数。
 
 更多细节见 [打包说明](docs/打包说明.md)。
+
+---
+
+## Windows/SmartScreen 提示怎么办
+
+下载 release 里的 exe 后，首次运行可能弹窗：
+
+> **Windows 已保护你的电脑** / “Microsoft Defender SmartScreen 无法验证此文件是否安全”
+> 发布者：未知
+
+**这是什么**：本程序没有购买商业代码签名证书，exe 未签名。SmartScreen 对**所有**
+未签名、且下载量尚少的新程序都会这样提示，属于**通用提示**，并不代表检测到病毒。
+
+**安全的选择**（任选其一）：
+
+1. **核对哈希**：把 release 里 `SHA256SUMS.txt` 的值和本地文件对比，一致即未被篡改。
+   ```powershell
+   Get-FileHash .\Tianditu-ArcMap-Loader.exe -Algorithm SHA256
+   ```
+2. **先看源码再运行**：本项目完全开源、运行期零第三方依赖，可自行审阅后
+   `python tianditu_gui.py` 直接跑，不依赖 exe。
+3. **解除拦截**：点弹窗的「**更多信息**」→「**仍要运行**」；
+   或右键文件 →「属性」→ 勾选底部「**解除锁定**」→ 确定。
+
+> 想彻底消除该提示，需要给 exe 做**代码签名**（见下方「代码签名」）。
+
+---
+
+## 代码签名
+
+SmartScreen 的“未知发布者”只能靠**代码签名**根治。常见方案：
+
+| 方案 | 费用 | 说明 |
+|------|------|------|
+| **Azure Trusted Signing**（微软） | 约 $10/月 | 与 GitHub Actions 集成好，个人/小项目最省事；需 Azure 账号 + 身份验证 |
+| **SignPath.io** | **开源项目免费** | 面向 OSS 的免费代码签名，提供 GitHub Action |
+| 传统 CA 证书（Sectigo / DigiCert 等） | 较贵 | OV 证书需累积下载量建立信誉；EV 证书**立即**获得 SmartScreen 信任 |
+
+签名后的效果：弹窗“发布者”会显示你的组织/署名，SmartScreen 拦截随之消失
+（EV / Trusted Signing 立即可信；OV 证书需一段时间累积下载信誉）。
+
+以 **Azure Trusted Signing** 为例，`.github/workflows/build.yml` 的构建步骤后加：
+
+```yaml
+      - name: Sign exe
+        uses: azure/trusted-signing-action@v0
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: https://<region>.codesigning.azure.net
+          trusted-signing-account-name: <your-account>
+          certificate-profile-name: <your-profile>
+          files-folder: dist
+          files-folder-filter: exe
+```
+
+（具体参数以官方 `azure/trusted-signing-action` 文档为准；密钥放 GitHub Secrets。）
 
 ---
 
