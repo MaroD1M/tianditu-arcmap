@@ -381,7 +381,7 @@ tianditu-arcmap/
 ├── requirements.txt     # 运行期依赖说明（仅标准库）
 ├── requirements-dev.txt # 开发/打包依赖（PyInstaller、pyflakes、Pillow）
 ├── icon.ico             # 程序 / 托盘图标（多尺寸 16~256）
-├── icon.png             # 图标源图（1024，便于重新生成 ico）
+├── icon.png             # 图标源图（PNG，便于重新生成 ico / 非 Windows 窗口图标）
 ├── README.md            # 本文件
 ├── LICENSE              # MIT
 ├── .gitignore

@@ -62,6 +62,7 @@ class App(_Base):
         self._quitting = False
 
         self._setup_style()
+        self._set_window_icon()
         self._build_menu()
         self._build_ui()
         self._bind_events()
@@ -109,6 +110,38 @@ class App(_Base):
         return 1.0
 
     # ------------------------------------------------------------------ 样式
+    def _set_window_icon(self):
+        """设置窗口 / 任务栏图标，使其与托盘、exe 图标一致（都用 icon.ico）。
+
+        优先级：
+          1. 程序目录下的 icon.ico（源码运行、以及 exe 旁放了 ico 时）；
+          2. 冻结成 exe 时，直接用 exe 自带图标（打包时 --icon 嵌入的）；
+          3. 非 Windows / 无 ico 时，回退到 icon.png（iconphoto）。
+        全程 try 保护，图标设置失败绝不影响程序启动。
+        """
+        if not HAS_TK:
+            return
+        ico = os.path.join(app_base_dir(), "icon.ico")
+        if IS_WINDOWS:
+            try:
+                if os.path.exists(ico):
+                    self.iconbitmap(default=ico)
+                elif getattr(sys, "frozen", False):
+                    self.iconbitmap(default=sys.executable)
+                else:
+                    self.iconbitmap(default=ico)   # 交由 Tk 尝试
+                return
+            except Exception:
+                pass
+        png = os.path.join(app_base_dir(), "icon.png")
+        try:
+            if os.path.exists(png):
+                img = tk.PhotoImage(file=png)
+                self.iconphoto(True, img)
+                self._icon_img = img        # 持有引用，防止被 GC
+        except Exception:
+            pass
+
     def _setup_style(self):
         theme.apply(self)
 
