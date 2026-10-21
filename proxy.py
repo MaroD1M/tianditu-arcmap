@@ -4,6 +4,7 @@
 import http.client
 import os
 import re
+import socket
 import threading
 import time
 import urllib.error
@@ -83,6 +84,11 @@ class TileProxy:
         self.cache_written = 0      # 本次运行写入磁盘的瓦片数
         self.cache_bytes = 0        # 本次运行写入的字节数
         self.cache_errors = 0       # 磁盘写入失败次数
+        # 正在使用中的上游连接。stop() 时必须主动断开，否则 worker 会卡在
+        # 网络读写里，进程退出时被 concurrent.futures 的 atexit join 拖住。
+        self._active_conns = set()
+        self._active_lock = threading.Lock()
+        self._closing = False
         self._reset_usage()
 
     # ---- 生命周期 ----------------------------------------------------------
@@ -93,6 +99,7 @@ class TileProxy:
     def start(self):
         if self._server is not None:
             return False
+        self._closing = False
         self._reset_usage()
         self.reset_stats()
         port = int(self.config.get("port", 80) or 80)
@@ -111,14 +118,19 @@ class TileProxy:
     def stop(self):
         if self._server is not None:
             server, self._server = self._server, None
+            self._closing = True
             try:
                 server.shutdown()      # 停止 accept 循环
             except Exception:
                 pass
             try:
-                n = server.shutdown_all_conns()   # 主动断开连接，避免干等
+                n = server.shutdown_all_conns()   # 主动断开客户端连接
             except Exception:
                 n = 0
+            try:
+                n += self.abort_active_conns()    # 主动断开在途上游连接
+            except Exception:
+                pass
             try:
                 server.server_close()  # 内部不再阻塞等待线程池
             except Exception:
@@ -127,6 +139,40 @@ class TileProxy:
             self.log("代理服务已停止" + ("（断开 %d 个连接）" % n if n else ""))
             return True
         return False
+
+    def _track_conn(self, conn, add=True):
+        with self._active_lock:
+            if add:
+                self._active_conns.add(conn)
+            else:
+                self._active_conns.discard(conn)
+
+    @staticmethod
+    def _abort_conn(conn):
+        """强制中断一个连接。
+
+        只 close() 不一定能唤醒阻塞在 recv 的线程（尤其部分平台），
+        先 shutdown(SHUT_RDWR) 才能让该线程立即返回。
+        """
+        sock = getattr(conn, "sock", None)
+        if sock is not None:
+            try:
+                sock.shutdown(socket.SHUT_RDWR)
+            except Exception:
+                pass
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+    def abort_active_conns(self):
+        """断开所有正在使用中的上游连接，让 worker 尽快结束。"""
+        with self._active_lock:
+            conns = list(self._active_conns)
+            self._active_conns.clear()
+        for c in conns:
+            self._abort_conn(c)
+        return len(conns)
 
     def is_running(self):
         return self._server is not None
@@ -653,7 +699,10 @@ class TileProxy:
         """返回 (status, content_type, body)。失败抛异常。"""
         last_err = None
         for attempt in (0, 1):
+            if self._closing:
+                raise RuntimeError("代理服务已停止")
             conn = self.pool.acquire(scheme, host, timeout)
+            self._track_conn(conn)
             try:
                 conn.request("GET", path)
                 resp = conn.getresponse()
@@ -668,8 +717,11 @@ class TileProxy:
             except Exception as e:
                 ConnPool._close(conn)
                 last_err = e
-                if attempt == 1:
+                # 正在停止时不要重试，否则 worker 会重新发起请求、继续拖住退出
+                if attempt == 1 or self._closing:
                     raise
+            finally:
+                self._track_conn(conn, False)
         raise last_err if last_err else RuntimeError("unknown")
 
     # ---- 核心转发 ----------------------------------------------------------

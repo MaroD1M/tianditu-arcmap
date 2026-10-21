@@ -18,7 +18,7 @@ IS_WINDOWS = sys.platform.startswith("win")
 # ---------------------------------------------------------------------------
 
 APP_TITLE = "天地图 ArcMap 加载工具"
-APP_VERSION = "2.0.2"
+APP_VERSION = "2.0.3"
 AUTOSTART_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 AUTOSTART_NAME = "TiandituArcMapTool"
 

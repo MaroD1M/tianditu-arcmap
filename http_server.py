@@ -22,12 +22,14 @@ class ProxyHTTPServer(ThreadingHTTPServer):
         # 用有界线程池限制并发线程数，避免 ArcMap 并发请求时线程爆炸；
         # 超出上限的请求排队等待，不会阻塞 accept 循环。
         #
-        # ⚠ ThreadPoolExecutor 默认创建的是**非 daemon** 线程，
-        # 它不会随主线程退出而结束，会导致「窗口关了但进程残留」。
-        # 这里把工作线程改成 daemon，保证进程能干净退出。
+        # 注意：不要试图把 worker 改成 daemon 来「保证退出」。
+        #   · Thread.start() 之后再设 daemon 会抛 RuntimeError，改不了；
+        #   · concurrent.futures 的 atexit 钩子会无条件 join 所有 worker，
+        #     daemon 属性也挡不住。
+        # 退出安全由 TileProxy.stop()（断开在途上游连接）+ GUI 的
+        # _force_exit()（兜底强制结束进程）共同保证。
         self._executor = ThreadPoolExecutor(max_workers=max_workers,
                                             thread_name_prefix="tile")
-        self._make_executor_daemon()
         # 记录所有活跃连接。停止时必须主动断开，否则要等 keep-alive
         # TCP 超时（最长 65 秒），表现为「点停止服务卡死」。
         self._conns = set()
@@ -55,37 +57,6 @@ class ProxyHTTPServer(ThreadingHTTPServer):
             except Exception:
                 pass
         return len(conns)
-
-    def _make_executor_daemon(self):
-        """把线程池里的工作线程标记为 daemon。
-
-        concurrent.futures 没有公开接口，这里在「线程刚创建」时通过
-        initializer 拿不到线程对象，因此改用私有 _threads 集合处理。
-        """
-        try:
-            ex = self._executor
-            orig = ex._adjust_thread_count
-
-            def _adjust():
-                before = len(getattr(ex, "_threads", ()))
-                orig()
-                threads = getattr(ex, "_threads", None)
-                if threads:
-                    for t in list(threads)[before:]:
-                        try:
-                            t.daemon = True
-                        except Exception:
-                            pass
-                    # 首次调用时可能已有一个线程，统一兜一遍
-                    for t in list(threads):
-                        try:
-                            t.daemon = True
-                        except Exception:
-                            pass
-
-            ex._adjust_thread_count = _adjust
-        except Exception:
-            pass
 
     def process_request(self, request, client_address):
         self._track(request, True)

@@ -1313,22 +1313,27 @@ class App(_Base):
         except Exception:
             pass
 
-        # 4) 兜底：确保不被遗留的非 daemon 线程卡住进程
+        # 4) 兜底：确保不被任何遗留线程卡住进程
         self._force_exit()
 
     def _force_exit(self, grace=1.0):
         """确保进程真正退出。
 
-        Tk 的 mainloop 返回后，若还有非 daemon 线程（例如某个请求线程
-        正好卡在网络读写上），Python 会一直等着，用户看到的就是
-        「窗口没了但任务管理器里还有进程」。
+        Tk 的 mainloop 返回后，若还有线程（例如某个请求线程正好卡在网络
+        读写上），Python 会一直等着，用户看到的就是「窗口没了但任务管理
+        器里还有进程」。
 
-        策略：先给正常收尾一点时间，仍不退出才强制结束。
+        ⚠ 这里必须检查**所有**存活线程，不能只看非 daemon：
+        concurrent.futures 注册的 atexit 钩子 `_python_exit` 会无条件
+        join 所有线程池 worker（不看 daemon 属性）。而本程序的 worker
+        由 daemon 的 accept 线程创建，默认就是 daemon，若按 daemon 过滤
+        会漏掉它们，导致进程卡在解释器收尾阶段。
+
+        策略：先给正常收尾一点时间，仍有线程存活就强制结束进程。
         """
         def leftover():
             return [t for t in threading.enumerate()
-                    if t is not threading.current_thread() and t.is_alive()
-                    and not t.daemon]
+                    if t is not threading.current_thread() and t.is_alive()]
 
         try:
             sys.stdout.flush()
@@ -1340,7 +1345,7 @@ class App(_Base):
         deadline = time.time() + max(0.0, grace)
         while time.time() < deadline:
             if not leftover():
-                # 没有非 daemon 线程了，正常返回即可，让解释器自己退出
+                # 没有残留线程了，正常返回即可，让解释器自己退出
                 return
             time.sleep(0.05)
 
@@ -1368,7 +1373,7 @@ def main():
     try:
         app.mainloop()
     finally:
-        # mainloop 返回（例如窗口被销毁）后，确保没有任何非 daemon 线程
+        # mainloop 返回（例如窗口被销毁）后，确保没有任何残留线程
         # 把进程卡住；托盘线程也必须清理掉，否则图标会残留在任务栏。
         try:
             if not getattr(app, "_quitting", False):
